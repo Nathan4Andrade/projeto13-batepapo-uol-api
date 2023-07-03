@@ -156,9 +156,13 @@ app.post("/status", async (req, res) => {
 
 async function removeInative() {
   const participants = await db.collection("participants").find().toArray();
+  const time = dayjs().format("HH:mm:ss");
+  console.log(participants);
 
   participants.forEach(async (participant) => {
-    if (Date.now() - user.lastStatus > 10000) {
+    console.log(participant.lastStatus);
+    console.log(Date.now());
+    if (Date.now() - participant.lastStatus > 10000) {
       await db
         .collection("participants")
         .deleteOne({ _id: new ObjectId(participant._id) });
@@ -167,7 +171,7 @@ async function removeInative() {
         to: "Todos",
         text: "sai da sala...",
         type: "status",
-        time: currentTime,
+        time: time,
       });
     }
   });
