@@ -115,27 +115,69 @@ app.get("/messages", async (req, res) => {
   const { limit } = req.query;
 
   try {
-    const showMessages = await db
+    const messages = await db
       .collection("messages")
-      .find({ $or: [{ from: user }, { to: { $in: ["Todos", user] } }] })
+      .find({ $or: [{ to: "Todos" }, { to: user }, { from: user }] })
       .toArray();
 
     if (limit) {
-      const limitedSchema = Joi.number().min(1);
-      const { error } = limitedSchema.validate(limit);
+      const limitSchema = Joi.number().min(1);
+      const { error } = limitSchema.validate(limit);
       if (error) {
         return res.status(422).send(error.message);
       }
-      return res.send(showMessages.slice(-limit));
+      return res.send(messages.slice(-limit));
     }
 
-    res.send(showMessages);
+    res.send(messages);
   } catch (error) {
     res.status(500).send(error.message);
   }
 });
 
-app.post("/status", (req, res) => {});
+app.post("/status", async (req, res) => {
+  const { user } = req.headers;
+
+  if (!user) return res.sendStatus(404);
+  const participant = await db
+    .collection("participants")
+    .findOne({ name: user });
+  if (!participant) return res.sendStatus(404);
+
+  try {
+    await db
+      .collection("participants")
+      .updateOne({ name: user }, { $set: { lastStatus: Date.now() } });
+    res.sendStatus(200);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+async function removeInative() {
+  const participants = await db.collection("participants").find().toArray();
+
+  participants.forEach(async (participant) => {
+    if (Date.now() - user.lastStatus > 10000) {
+      await db
+        .collection("participants")
+        .deleteOne({ _id: new ObjectId(participant._id) });
+      await db.collection("messages").insertOne({
+        from: participant.name,
+        to: "Todos",
+        text: "sai da sala...",
+        type: "status",
+        time: currentTime,
+      });
+    }
+  });
+}
+
+setInterval(removeInative, 15000);
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Running server on port ${PORT}`));
+
+/* 
+
+bla bla bla bla bla blal blalvlblsl lslaldkf sla dll lululu lalalalala cucucu; */
